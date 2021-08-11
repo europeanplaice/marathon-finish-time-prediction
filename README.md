@@ -1,6 +1,6 @@
 # marathon-finish-time-prediction
 
-![Result_Example](https://user-images.githubusercontent.com/38364983/129001788-2bccaa84-f01b-4311-bec5-2b29099ddf90.png)
+![Figure_1](https://user-images.githubusercontent.com/38364983/129034708-cbfc09a6-82f1-4128-b09c-0e12de671ce5.png)
+![Figure_2](https://user-images.githubusercontent.com/38364983/129034715-c380d417-7125-48eb-9709-916daa91dc40.png)
 
-![Example2](https://user-images.githubusercontent.com/38364983/129002978-df148ce8-0d96-4e62-bc3d-a6d0cd5ef110.png)
 
