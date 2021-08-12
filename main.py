@@ -84,7 +84,7 @@ def train(dataset, test_dataset):
     decoder = Decoder()
     def negloglik(y, rv_y): return -rv_y.log_prob(tf.cast(y, tf.float32))
     patience = 0
-    for i in tqdm(range(100)):
+    for i in tqdm(range(200)):
         for data in dataset:
             enc_dec_splitid = np.random.randint(1, num_splits - 1)
             dataforenc = data[:, :enc_dec_splitid]
@@ -252,8 +252,10 @@ def main():
     parser.add_argument("--do_train", action="store_true")
     parser.add_argument("--do_eval", action="store_true")
     parser.add_argument("--do_predict", action="store_true")
+    parser.add_argument("--do_all_splits_eval", action="store_true")
     parser.add_argument("--train_data_path")
-    parser.add_argument("--record")
+    parser.add_argument("--record_so_far")
+    parser.add_argument("--full_record")
     parser.add_argument("--encoder_model_path", default='encoder')
     parser.add_argument("--decoder_model_path", default='decoder')
 
@@ -262,7 +264,7 @@ def main():
     if args.do_train:
 
         df = pd.read_csv(args.train_data_path)
-        df = df.sample(5000)
+        df = df.sample(10000)
         print(df)
         df["5K"] = df["5K"].apply(parse_time)
         df["10K"] = df["10K"].apply(parse_time)
@@ -292,7 +294,7 @@ def main():
     if args.do_eval:
         validate(test_dataset, encoder, decoder)
     if args.do_predict:
-        predict(args.record.split(","), encoder, decoder)
+        predict(args.record_so_far.split(","), encoder, decoder)
 
 
 if __name__ == '__main__':
