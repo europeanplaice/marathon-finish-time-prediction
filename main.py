@@ -226,8 +226,8 @@ def predict(record_list, encoder, decoder):
     upper_50 = np.percentile(sample, 75, 0)
     lower_50 = np.percentile(sample, 25, 0)
     _km = [5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]
-    for i in range(sample.shape[2] - 1):
-        kmidx = _km[enc_dec_splitid + i + 1]
+    for i in range(sample.shape[2]):
+        kmidx = _km[enc_dec_splitid + i]
         print(
             str(kmidx) + "KM::::",
             "lower_95=>",
