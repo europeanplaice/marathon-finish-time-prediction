@@ -2,9 +2,11 @@ import tensorflow as tf
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
+import argparse
 from tqdm import tqdm
 import seaborn as sns
 import pandas as pd
+import copy
 sns.set(font="ricty diminished")
 HIDDEN_SIZE = 128
 BATCH_SIZE = 256
@@ -77,11 +79,12 @@ class Decoder(tf.keras.Model):
 
 
 def train(dataset, test_dataset):
-    optimizer = tf.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.optimizers.Adam(learning_rate=0.0001)
     encoder = Encoder()
     decoder = Decoder()
     def negloglik(y, rv_y): return -rv_y.log_prob(tf.cast(y, tf.float32))
-    for i in tqdm(range(50)):
+    patience = 0
+    for i in tqdm(range(100)):
         for data in dataset:
             enc_dec_splitid = np.random.randint(1, num_splits - 1)
             dataforenc = data[:, :enc_dec_splitid]
@@ -102,9 +105,9 @@ def train(dataset, test_dataset):
                 zip(
                     grads,
                     encoder.trainable_weights + decoder.trainable_weights))
-            test_losses = []
+        test_losses = []
+        for enc_dec_splitid in range(1, num_splits):
             for test_data in test_dataset:
-                enc_dec_splitid = np.random.randint(1, num_splits - 1)
                 dataforenc = test_data[:, :enc_dec_splitid]
                 datafordec = test_data[:, enc_dec_splitid:]
                 kmforenc = km[:enc_dec_splitid]
@@ -116,7 +119,21 @@ def train(dataset, test_dataset):
                     dataforenc, training=False)
                 loss = negloglik(datafordec, predicts)
                 test_losses.append(loss)
-            print(np.mean(test_losses))
+        print("\n", np.mean(test_losses))
+        if i == 0:
+            best = np.mean(test_losses)
+        else:
+            if np.mean(test_losses) > best:
+                if patience == 5:
+                    print("Early stopping.")
+                    break
+                else:
+                    patience += 1
+            else:
+                best = min(best, np.mean(test_losses))
+                encoder.save_weights("encoder")
+                decoder.save_weights("decoder")
+                patience = 0
     return encoder, decoder
 
 
@@ -146,71 +163,137 @@ def parse_time(x):
         return -1
 
 
-def validate(dataset, encoder, decoder):
-    for data in dataset:
-        data = data[:1]
-        enc_dec_splitid = np.random.randint(1, num_splits - 1)
-        dataforenc = data[:, :enc_dec_splitid]
-        datafordec = data[:, enc_dec_splitid:]
+def predict_from_record(data, encoder, decoder, enc_dec_splitid):
+    dataforenc = data[:, :enc_dec_splitid]
+    datafordec = data[:, enc_dec_splitid:]
 
-        kmforenc = km[:enc_dec_splitid]
-        kmfordec = km[enc_dec_splitid:]
-        splits_recorded, state = encoder(dataforenc, kmforenc, training=False)
-        predicts = decoder(state, splits_recorded,
+    kmforenc = km[:enc_dec_splitid]
+    kmfordec = km[enc_dec_splitid:]
+    splits_recorded, state = encoder(dataforenc, kmforenc, training=False)
+    predict_dist = decoder(state, splits_recorded,
                            enc_dec_splitid, kmfordec,
                            dataforenc, training=False)
-        sample = predicts.sample(100000)
-        upper_95 = np.percentile(sample, 95, 0)
-        lower_95 = np.percentile(sample, 5, 0)
-        middle = np.percentile(sample, 50, 0)
-        upper_50 = np.percentile(sample, 75, 0)
-        lower_50 = np.percentile(sample, 25, 0)
-        xaxis = [5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]
+    sample = predict_dist.sample(100000)
+    return sample
+
+
+def draw_graph(sample, enc_dec_splitid, data=None):
+    upper_95 = np.percentile(sample, 95, 0)
+    lower_95 = np.percentile(sample, 5, 0)
+    middle = np.percentile(sample, 50, 0)
+    upper_50 = np.percentile(sample, 75, 0)
+    lower_50 = np.percentile(sample, 25, 0)
+    xaxis = [5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]
+    if data is not None:
+        dataforenc = data[:, :enc_dec_splitid]
+        datafordec = data[:, enc_dec_splitid:]
         plt.plot(xaxis[:enc_dec_splitid], dataforenc[0],
                  linestyle='--', marker='o')
         plt.plot(xaxis[enc_dec_splitid:], datafordec[0], label="true",
                  linestyle='--', marker='o')
-        plt.plot(xaxis[enc_dec_splitid:], middle[0], label="forecast",
-                 linestyle='--', marker='o')
-        plt.fill_between(
-            xaxis[enc_dec_splitid:],
-            lower_95[0],
-            upper_95[0], color='orange', alpha=0.3, label="ci95%")
-        plt.fill_between(
-            xaxis[enc_dec_splitid:],
-            lower_50[0],
-            upper_50[0], color='orange', alpha=0.5, label="ci50%")
-        plt.legend()
-        plt.show()
+    plt.plot(xaxis[enc_dec_splitid:], middle[0], label="forecast",
+             linestyle='--', marker='o')
+    plt.fill_between(
+        xaxis[enc_dec_splitid:],
+        lower_95[0],
+        upper_95[0], color='orange', alpha=0.3, label="ci95%")
+    plt.fill_between(
+        xaxis[enc_dec_splitid:],
+        lower_50[0],
+        upper_50[0], color='orange', alpha=0.5, label="ci50%")
+    plt.legend()
+    plt.show()
+
+
+def validate(dataset, encoder, decoder):
+    for data in dataset:
+        data = data[:1]
+        enc_dec_splitid = np.random.randint(1, num_splits - 1)
+        sample = predict_from_record(data, encoder, decoder, enc_dec_splitid)
+        draw_graph(sample, enc_dec_splitid, data)
+
+
+def predict(record_list, encoder, decoder):
+    enc_dec_splitid = len(record_list)
+    record_list = np.array([parse_time(time) for time in record_list])
+    record_list /= (60 * 60)
+    record_list = np.expand_dims(record_list, 0)
+    sample = predict_from_record(
+        record_list, encoder, decoder, enc_dec_splitid)
+    upper_95 = np.percentile(sample, 95, 0)
+    lower_95 = np.percentile(sample, 5, 0)
+    middle = np.percentile(sample, 50, 0)
+    upper_50 = np.percentile(sample, 75, 0)
+    lower_50 = np.percentile(sample, 25, 0)
+    _km = [5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]
+    for i in range(sample.shape[2] - 1):
+        kmidx = _km[enc_dec_splitid + i + 1]
+        print(
+            str(kmidx) + "KM::::",
+            "lower_95=>",
+            str(datetime.timedelta(seconds=lower_95[0, i] * (60 * 60))),
+            "lower_50=>",
+            str(datetime.timedelta(seconds=lower_50[0, i] * (60 * 60))),
+            "middle=>",
+            str(datetime.timedelta(seconds=middle[0, i] * (60 * 60))),
+            "upper_50=>",
+            str(datetime.timedelta(seconds=upper_50[0, i] * (60 * 60))),
+            "upper_95=>",
+            str(datetime.timedelta(seconds=upper_95[0, i] * (60 * 60))),
+        )
+        print("\n")
+    draw_graph(sample, enc_dec_splitid)
 
 
 def main():
 
-    df = pd.read_csv("boston2018.csv")
-    df = df.sample(2000)
-    print(df)
-    df["5K"] = df["5K"].apply(parse_time)
-    df["10K"] = df["10K"].apply(parse_time)
-    df["15K"] = df["15K"].apply(parse_time)
-    df["20K"] = df["20K"].apply(parse_time)
-    df["Half"] = df["Half"].apply(parse_time)
-    df["25K"] = df["25K"].apply(parse_time)
-    df["30K"] = df["30K"].apply(parse_time)
-    df["35K"] = df["35K"].apply(parse_time)
-    df["40K"] = df["40K"].apply(parse_time)
-    df["Official Time"] = df["Official Time"].apply(parse_time)
+    parser = argparse.ArgumentParser()
 
-    data = df[
-        ["5K", "10K", "15K", "20K", "Half",
-         "25K", "30K", "35K", "40K", "Official Time"]]
-    data = data[data.min(1) > 0.]
-    data = data.values
+    parser.add_argument("--do_train", action="store_true")
+    parser.add_argument("--do_eval", action="store_true")
+    parser.add_argument("--do_predict", action="store_true")
+    parser.add_argument("--train_data_path")
+    parser.add_argument("--record")
+    parser.add_argument("--encoder_model_path", default='encoder')
+    parser.add_argument("--decoder_model_path", default='decoder')
 
-    data /= (60 * 60)
+    args = parser.parse_args()
 
-    dataset, valid_dataset, test_dataset = makedataset(data)
-    encoder, decoder = train(dataset, valid_dataset)
-    validate(test_dataset, encoder, decoder)
+    if args.do_train:
+
+        df = pd.read_csv(args.train_data_path)
+        df = df.sample(5000)
+        print(df)
+        df["5K"] = df["5K"].apply(parse_time)
+        df["10K"] = df["10K"].apply(parse_time)
+        df["15K"] = df["15K"].apply(parse_time)
+        df["20K"] = df["20K"].apply(parse_time)
+        df["Half"] = df["Half"].apply(parse_time)
+        df["25K"] = df["25K"].apply(parse_time)
+        df["30K"] = df["30K"].apply(parse_time)
+        df["35K"] = df["35K"].apply(parse_time)
+        df["40K"] = df["40K"].apply(parse_time)
+        df["Official Time"] = df["Official Time"].apply(parse_time)
+
+        data = df[
+            ["5K", "10K", "15K", "20K", "Half",
+             "25K", "30K", "35K", "40K", "Official Time"]]
+        data = data[data.min(1) > 0.]
+        data = data.values
+
+        data /= (60 * 60)
+
+        dataset, valid_dataset, test_dataset = makedataset(data)
+        encoder, decoder = train(dataset, valid_dataset)
+    encoder = Encoder()
+    decoder = Decoder()
+    encoder.load_weights(args.encoder_model_path)
+    decoder.load_weights(args.decoder_model_path)
+    if args.do_eval:
+        validate(test_dataset, encoder, decoder)
+    if args.do_predict:
+        predict(args.record.split(","), encoder, decoder)
 
 
-main()
+if __name__ == '__main__':
+    main()
