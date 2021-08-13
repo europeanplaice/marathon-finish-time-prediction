@@ -118,11 +118,16 @@ def train(dataset, test_dataset):
                     state, splits_recorded, enc_dec_splitid, kmfordec,
                     dataforenc, training=False)
                 loss = negloglik(datafordec, predicts)
+                # sample = predicts.sample(1000)
+                # print(datafordec.shape, tf.reduce_mean(sample, 0).shape)
+                # mse = tf.keras.losses.MeanSquaredError()
+                # loss = mse(datafordec, tf.reduce_mean(sample, 0))
+                
                 test_losses.append(loss)
         print("\n", np.mean(test_losses))
         if i == 0:
             best = np.mean(test_losses)
-        else:
+        elif i > 50:
             if np.mean(test_losses) > best:
                 if patience == 5:
                     print("Early stopping.")
@@ -253,7 +258,7 @@ def main():
     parser.add_argument("--do_eval", action="store_true")
     parser.add_argument("--do_predict", action="store_true")
     parser.add_argument("--do_all_splits_eval", action="store_true")
-    parser.add_argument("--train_data_path")
+    parser.add_argument("--train_data_path", default='boston2017-2018.csv')
     parser.add_argument("--record_so_far")
     parser.add_argument("--full_record")
     parser.add_argument("--encoder_model_path", default='encoder')
@@ -264,7 +269,7 @@ def main():
     if args.do_train:
 
         df = pd.read_csv(args.train_data_path)
-        df = df.sample(10000)
+        df = df.sample(len(df))
         print(df)
         df["5K"] = df["5K"].apply(parse_time)
         df["10K"] = df["10K"].apply(parse_time)
