@@ -45,7 +45,7 @@ class Decoder(tf.keras.Model):
         self.dropout = tf.keras.layers.Dropout(0.2)
         self.posemb = tf.keras.layers.Embedding(num_splits, HIDDEN_SIZE)
         self.prob = tfp.layers.DistributionLambda(
-            lambda t: tfp.distributions.Independent(tfp.distributions.LogNormal(
+            lambda t: tfp.distributions.Independent(tfp.distributions.Normal(
                 loc=t[:, :, 0],
                 scale=tf.math.softplus(t[:, :, 1]),
                 ),
