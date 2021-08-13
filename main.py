@@ -228,8 +228,8 @@ def predict(record_list, encoder, decoder):
     record_list = np.expand_dims(record_list, 0)
     sample = predict_from_record(
         record_list, encoder, decoder, enc_dec_splitid)
-    upper_95 = np.percentile(sample, 95, 0)
-    lower_95 = np.percentile(sample, 5, 0)
+    upper_95 = np.percentile(sample, 97.5, 0)
+    lower_95 = np.percentile(sample, 2.5, 0)
     middle = np.percentile(sample, 50, 0)
     upper_50 = np.percentile(sample, 75, 0)
     lower_50 = np.percentile(sample, 25, 0)
