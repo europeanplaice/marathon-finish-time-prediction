@@ -41,15 +41,13 @@ class Decoder(tf.keras.Model):
         self.cell = tf.keras.layers.GRUCell(HIDDEN_SIZE)
         self.dense_0 = tf.keras.layers.Dense(
             HIDDEN_SIZE / 2, activation="relu")
-        self.dense = tf.keras.layers.Dense(4)
+        self.dense = tf.keras.layers.Dense(2)
         self.dropout = tf.keras.layers.Dropout(0.2)
         self.posemb = tf.keras.layers.Embedding(num_splits, HIDDEN_SIZE)
         self.prob = tfp.layers.DistributionLambda(
-            lambda t: tfp.distributions.Independent(tfp.distributions.NormalInverseGaussian(
+            lambda t: tfp.distributions.Independent(tfp.distributions.LogNormal(
                 loc=t[:, :, 0],
                 scale=tf.math.softplus(t[:, :, 1]),
-                tailweight=tf.math.softplus(t[:, :, 2]),
-                skewness=tf.math.softplus(t[:, :, 3]),
                 ),
                 reinterpreted_batch_ndims=2
             )
@@ -74,9 +72,7 @@ class Decoder(tf.keras.Model):
             mean = tf.cast(dataforenc[:, -1], tf.float32)
             mean = mean + pred[:, 0] * kmfordec[i]
             std = pred[:, 1]
-            tailweight = pred[:, 2]
-            skewness = pred[:, 3]
-            pred = tf.stack([mean, std, tailweight, skewness], 1)
+            pred = tf.stack([mean, std], 1)
             predicts.append(pred)
         predicts = tf.stack(predicts, 1)
         dist = self.prob(predicts)
