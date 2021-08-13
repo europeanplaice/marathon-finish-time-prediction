@@ -206,6 +206,9 @@ def draw_graph(sample, enc_dec_splitid, data=None):
         xaxis[enc_dec_splitid:],
         lower_50[0],
         upper_50[0], color='orange', alpha=0.5, label="ci50%")
+    plt.xlabel('Kilometer')
+    plt.ylabel('Hours')
+    plt.title("Finish time prediction")
     plt.legend()
     plt.show()
 
