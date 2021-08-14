@@ -79,7 +79,7 @@ class Decoder(tf.keras.Model):
         return dist
 
 
-def train(dataset, test_dataset):
+def train(dataset, test_dataset, args):
     optimizer = tf.optimizers.Adam(learning_rate=0.0001)
     encoder = Encoder()
     decoder = Decoder()
@@ -126,7 +126,9 @@ def train(dataset, test_dataset):
         print("\n", np.mean(test_losses))
         if i == 0:
             best = np.mean(test_losses)
-        elif i > 50:
+            encoder.save_weights(args.encoder_model_path)
+            decoder.save_weights(args.decoder_model_path)
+        else:
             if np.mean(test_losses) > best:
                 if patience == 5:
                     print("Early stopping.")
@@ -135,8 +137,8 @@ def train(dataset, test_dataset):
                     patience += 1
             else:
                 best = min(best, np.mean(test_losses))
-                encoder.save_weights("encoder")
-                decoder.save_weights("decoder")
+                encoder.save_weights(args.encoder_model_path)
+                decoder.save_weights(args.decoder_model_path)
                 patience = 0
     return encoder, decoder
 
@@ -266,9 +268,9 @@ def main():
     parser.add_argument("--elapsed_time")
     parser.add_argument("--full_record")
     parser.add_argument("--encoder_model_path",
-                        default='trained_model/encoder')
+                        default='trained_model/encoder/encoder')
     parser.add_argument("--decoder_model_path",
-                        default='trained_model/decoder')
+                        default='trained_model/decoder/decoder')
 
     args = parser.parse_args()
     if args.elapsed_time is not None:
@@ -278,7 +280,6 @@ def main():
 
         df = pd.read_csv(args.train_data_path)
         df = df.sample(len(df))
-        print(df)
         df["5K"] = df["5K"].apply(parse_time)
         df["10K"] = df["10K"].apply(parse_time)
         df["15K"] = df["15K"].apply(parse_time)
@@ -300,7 +301,7 @@ def main():
 
         dataset, valid_dataset, test_dataset = makedataset(data)
         if args.do_train:
-            encoder, decoder = train(dataset, valid_dataset)
+            encoder, decoder = train(dataset, valid_dataset, args)
     encoder = Encoder()
     decoder = Decoder()
     encoder.load_weights(args.encoder_model_path)
