@@ -280,13 +280,13 @@ def main():
     parser.add_argument("--do_predict", action="store_true")
     parser.add_argument("--do_all_splits_eval", action="store_true")
     parser.add_argument("--train_data_path", default='boston2017-2018.csv')
-    parser.add_argument("--record_so_far")
+    parser.add_argument("--elapsed_time")
     parser.add_argument("--full_record")
     parser.add_argument("--encoder_model_path", default='encoder')
     parser.add_argument("--decoder_model_path", default='decoder')
 
     args = parser.parse_args()
-    if args.record_so_far is not None:
+    if args.elapsed_time is not None:
         args.do_predict = True
 
     if args.do_train or args.do_eval:
@@ -323,7 +323,7 @@ def main():
     if args.do_eval:
         validate(test_dataset, encoder, decoder)
     if args.do_predict:
-        predict(args.record_so_far.split(","), encoder, decoder)
+        predict(args.elapsed_time.split(","), encoder, decoder)
 
 
 if __name__ == '__main__':
