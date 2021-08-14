@@ -6,153 +6,14 @@ import argparse
 from tqdm import tqdm
 import seaborn as sns
 import pandas as pd
-from utils import parse_time
+from utils import parse_time, preprocess_rawdata, makedataset
+from utils import process_one_dim_to_two_dim_sec
+from finish_time_predictor import Encoder, Decoder, FinishTimePredictor
 sns.set(font="ricty diminished")
 HIDDEN_SIZE = 128
 BATCH_SIZE = 256
 num_splits = 10
 km = np.array([5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]) / 42.195
-
-
-class Encoder(tf.keras.Model):
-    def __init__(self):
-        super().__init__()
-        self.dense = tf.keras.layers.Dense(HIDDEN_SIZE)
-        self.cell = tf.keras.layers.GRUCell(HIDDEN_SIZE)
-        self.dropout = tf.keras.layers.Dropout(0.2)
-
-    def call(self, x, kmforenc, training):
-        zero = tf.zeros((x.shape[0], HIDDEN_SIZE))
-        for i in range(x.shape[1]):
-            x /= kmforenc[i]
-            x = self.dense(tf.expand_dims(x[:, i], 1))
-            if i == 0:
-                x, state = self.cell(x, states=[zero])
-            else:
-                x, state = self.cell(x, states=state)
-        # x = self.dropout(x, training=training)
-        return x, state
-
-
-class Decoder(tf.keras.Model):
-    def __init__(self):
-        import tensorflow_probability as tfp
-        super().__init__()
-        self.cell = tf.keras.layers.GRUCell(HIDDEN_SIZE)
-        self.dense_0 = tf.keras.layers.Dense(
-            HIDDEN_SIZE / 2, activation="relu")
-        self.dense = tf.keras.layers.Dense(2)
-        self.dropout = tf.keras.layers.Dropout(0.2)
-        self.posemb = tf.keras.layers.Embedding(num_splits, HIDDEN_SIZE)
-        self.prob = tfp.layers.DistributionLambda(
-            lambda t: tfp.distributions.Independent(tfp.distributions.Normal(
-                loc=t[:, :, 0],
-                scale=tf.math.softplus(t[:, :, 1]),
-            ),
-                reinterpreted_batch_ndims=2
-            )
-        )
-
-    def call(
-            self, state, last_splits_recorded, num_splits_recorded, kmfordec,
-            dataforenc, training):
-        predicts = []
-
-        for i in range(num_splits - num_splits_recorded):
-            pos = tf.ones((last_splits_recorded.shape[0], 1))
-            pos = pos * (num_splits_recorded + i)
-            posencoded = tf.squeeze(self.posemb(pos), 1)
-            if i == 0:
-                last_splits_recorded += posencoded
-                x, state = self.cell(last_splits_recorded, states=state)
-            else:
-                x += posencoded
-                x, state = self.cell(x, states=state)
-            pred = self.dense(self.dense_0(x))
-            mean = tf.cast(dataforenc[:, -1], tf.float32)
-            mean = mean + pred[:, 0] * kmfordec[i]
-            std = pred[:, 1]
-            pred = tf.stack([mean, std], 1)
-            predicts.append(pred)
-        predicts = tf.stack(predicts, 1)
-        dist = self.prob(predicts)
-        return dist
-
-
-def train(dataset, test_dataset, args):
-    optimizer = tf.optimizers.Adam(learning_rate=0.0001)
-    encoder = Encoder()
-    decoder = Decoder()
-
-    def negloglik(y, rv_y):
-        return -rv_y.log_prob(tf.cast(y, tf.float32))
-    patience = 0
-    for i in tqdm(range(200)):
-        for data in dataset:
-            enc_dec_splitid = np.random.randint(1, num_splits - 1)
-            dataforenc = data[:, :enc_dec_splitid]
-            datafordec = data[:, enc_dec_splitid:]
-            kmforenc = km[:enc_dec_splitid]
-            kmfordec = km[enc_dec_splitid:]
-            with tf.GradientTape() as tape:
-                splits_recorded, state = encoder(dataforenc, kmforenc,
-                                                 training=True)
-                predicts = decoder(state, splits_recorded,
-                                   enc_dec_splitid, kmfordec, dataforenc,
-                                   training=True)
-                loss = negloglik(datafordec, predicts)
-            grads = tape.gradient(
-                loss,
-                encoder.trainable_weights + decoder.trainable_weights)
-            optimizer.apply_gradients(
-                zip(
-                    grads,
-                    encoder.trainable_weights + decoder.trainable_weights))
-        test_losses = []
-        for enc_dec_splitid in range(1, num_splits):
-            for test_data in test_dataset:
-                dataforenc = test_data[:, :enc_dec_splitid]
-                datafordec = test_data[:, enc_dec_splitid:]
-                kmforenc = km[:enc_dec_splitid]
-                kmfordec = km[enc_dec_splitid:]
-                splits_recorded, state = encoder(dataforenc, kmforenc,
-                                                 training=False)
-                predicts = decoder(
-                    state, splits_recorded, enc_dec_splitid, kmfordec,
-                    dataforenc, training=False)
-                loss = negloglik(datafordec, predicts)
-
-                test_losses.append(loss)
-        print("\n", np.mean(test_losses))
-        if i == 0:
-            best = np.mean(test_losses)
-            encoder.save_weights(args.encoder_model_path)
-            decoder.save_weights(args.decoder_model_path)
-        else:
-            if np.mean(test_losses) > best:
-                if patience == 5:
-                    print("Early stopping.")
-                    break
-                else:
-                    patience += 1
-            else:
-                best = min(best, np.mean(test_losses))
-                encoder.save_weights(args.encoder_model_path)
-                decoder.save_weights(args.decoder_model_path)
-                patience = 0
-    return encoder, decoder
-
-
-def makedataset(data):
-    idx = int(len(data) * 0.8)
-    dataset = tf.data.Dataset.from_tensor_slices((data[:idx]))
-    dataset = dataset.shuffle(buffer_size=100)
-    dataset = dataset.batch(BATCH_SIZE)
-    _valid_dataset = tf.data.Dataset.from_tensor_slices((data[idx:]))
-    _valid_dataset = _valid_dataset.shuffle(buffer_size=100)
-    valid_dataset = _valid_dataset.batch(BATCH_SIZE)
-    test_dataset = _valid_dataset.batch(1)
-    return dataset, valid_dataset, test_dataset
 
 
 def predict_from_record(data, encoder, decoder, enc_dec_splitid):
@@ -165,7 +26,12 @@ def predict_from_record(data, encoder, decoder, enc_dec_splitid):
                            enc_dec_splitid, kmfordec,
                            dataforenc, training=False)
     sample = predict_dist.sample(100000)
-    return sample
+    upper_95 = np.percentile(sample, 95, 0)
+    lower_95 = np.percentile(sample, 5, 0)
+    middle = np.percentile(sample, 50, 0)
+    upper_50 = np.percentile(sample, 75, 0)
+    lower_50 = np.percentile(sample, 25, 0)
+    return sample, upper_95, lower_95, middle, upper_50, lower_50,
 
 
 def draw_graph(sample, enc_dec_splitid, data=None):
@@ -245,13 +111,11 @@ def validate(dataset, encoder, decoder):
         draw_graph(sample, enc_dec_splitid, data)
 
 
-def predict(record_list, encoder, decoder):
-    enc_dec_splitid = len(record_list)
-    record_list = np.array([parse_time(time) for time in record_list])
-    record_list /= (60 * 60)
-    record_list = np.expand_dims(record_list, 0)
+def predict(one_dim_list, encoder, decoder):
+    enc_dec_splitid = len(one_dim_list)
+    two_dim_list = process_one_dim_to_two_dim_sec(one_dim_list)
     sample = predict_from_record(
-        record_list, encoder, decoder, enc_dec_splitid)
+        two_dim_list, encoder, decoder, enc_dec_splitid)
     print_estimation(sample, enc_dec_splitid)
     draw_graph(sample, enc_dec_splitid)
 
@@ -266,7 +130,10 @@ def main():
     parser.add_argument("--do_all_splits_eval", action="store_true")
     parser.add_argument("--train_data_path", default='boston2017-2018.csv')
     parser.add_argument("--elapsed_time")
+    parser.add_argument("--batch_size", default=256, type=int)
+    parser.add_argument("--hidden_size", default=128, type=int)
     parser.add_argument("--full_record")
+    parser.add_argument("--graph_save_path", default="estimation.jpg")
     parser.add_argument("--encoder_model_path",
                         default='trained_model/encoder/encoder')
     parser.add_argument("--decoder_model_path",
@@ -275,41 +142,25 @@ def main():
     args = parser.parse_args()
     if args.elapsed_time is not None:
         args.do_predict = True
-
+    encoder = Encoder(args)
+    decoder = Decoder(args)
+    finish_time_predictor = FinishTimePredictor(encoder, decoder)
     if args.do_train or args.do_eval:
 
         df = pd.read_csv(args.train_data_path)
-        df = df.sample(len(df))
-        df["5K"] = df["5K"].apply(parse_time)
-        df["10K"] = df["10K"].apply(parse_time)
-        df["15K"] = df["15K"].apply(parse_time)
-        df["20K"] = df["20K"].apply(parse_time)
-        df["Half"] = df["Half"].apply(parse_time)
-        df["25K"] = df["25K"].apply(parse_time)
-        df["30K"] = df["30K"].apply(parse_time)
-        df["35K"] = df["35K"].apply(parse_time)
-        df["40K"] = df["40K"].apply(parse_time)
-        df["Official Time"] = df["Official Time"].apply(parse_time)
+        data = preprocess_rawdata(df)
 
-        data = df[
-            ["5K", "10K", "15K", "20K", "Half",
-             "25K", "30K", "35K", "40K", "Official Time"]]
-        data = data[data.min(1) > 0.]
-        data = data.values
-
-        data /= (60 * 60)
-
-        dataset, valid_dataset, test_dataset = makedataset(data)
+        train_dataset, eval_dataset, eval_onebatch_dataset = \
+            makedataset(data, args, True)
         if args.do_train:
-            encoder, decoder = train(dataset, valid_dataset, args)
-    encoder = Encoder()
-    decoder = Decoder()
-    encoder.load_weights(args.encoder_model_path)
-    decoder.load_weights(args.decoder_model_path)
+            encoder, decoder = finish_time_predictor.train(
+                train_dataset, eval_dataset, args)
     if args.do_eval:
-        validate(test_dataset, encoder, decoder)
+        finish_time_predictor.load_weights(args)
+        finish_time_predictor.validate(eval_onebatch_dataset, args)
     if args.do_predict:
-        predict(args.elapsed_time.split(","), encoder, decoder)
+        finish_time_predictor.load_weights(args)
+        finish_time_predictor.predict(args.elapsed_time.split(","), args)
 
 
 if __name__ == '__main__':
