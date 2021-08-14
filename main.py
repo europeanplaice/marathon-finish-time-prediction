@@ -214,11 +214,49 @@ def draw_graph(sample, enc_dec_splitid, data=None):
     plt.show()
 
 
+def print_estimation(sample, enc_dec_splitid, data=None):
+    if data is not None:
+        datafordec = data[:, enc_dec_splitid:]
+    upper_95 = np.percentile(sample, 97.5, 0)
+    lower_95 = np.percentile(sample, 2.5, 0)
+    middle = np.percentile(sample, 50, 0)
+    upper_50 = np.percentile(sample, 75, 0)
+    lower_50 = np.percentile(sample, 25, 0)
+    _km = [
+        "5Km", "10Km", "15Km", "20Km", "Half", "25Km",
+        "30Km", "35Km", "40Km", "Finish"]
+    print("**Estimation**")
+    for i in range(sample.shape[2]):
+        kmidx = _km[enc_dec_splitid + i]
+        if data is not None:
+            actual_data = np.array(datafordec[0])[i]
+            actual_data = str(
+                datetime.timedelta(seconds=round(actual_data * (60 * 60))))
+            actual_data = f"(actual time:{actual_data}) "
+        else:
+            actual_data = ""
+        print(
+            kmidx.ljust(10),
+            actual_data,
+            "lower_95 =>",
+            str(datetime.timedelta(seconds=round(lower_95[0, i] * (60 * 60)))),
+            "  lower_50 =>",
+            str(datetime.timedelta(seconds=round(lower_50[0, i] * (60 * 60)))),
+            "  median =>",
+            str(datetime.timedelta(seconds=round(middle[0, i] * (60 * 60)))),
+            "  upper_50 =>",
+            str(datetime.timedelta(seconds=round(upper_50[0, i] * (60 * 60)))),
+            "  upper_95 =>",
+            str(datetime.timedelta(seconds=round(upper_95[0, i] * (60 * 60)))),
+        )
+
+
 def validate(dataset, encoder, decoder):
     for data in dataset:
         data = data[:1]
         enc_dec_splitid = np.random.randint(1, num_splits - 1)
         sample = predict_from_record(data, encoder, decoder, enc_dec_splitid)
+        print_estimation(sample, enc_dec_splitid, data)
         draw_graph(sample, enc_dec_splitid, data)
 
 
@@ -229,28 +267,7 @@ def predict(record_list, encoder, decoder):
     record_list = np.expand_dims(record_list, 0)
     sample = predict_from_record(
         record_list, encoder, decoder, enc_dec_splitid)
-    upper_95 = np.percentile(sample, 97.5, 0)
-    lower_95 = np.percentile(sample, 2.5, 0)
-    middle = np.percentile(sample, 50, 0)
-    upper_50 = np.percentile(sample, 75, 0)
-    lower_50 = np.percentile(sample, 25, 0)
-    _km = [5, 10, 15, 20, 42.195 / 2, 25, 30, 35, 40, 42.195]
-    for i in range(sample.shape[2]):
-        kmidx = _km[enc_dec_splitid + i]
-        print(
-            str(kmidx) + "KM::::",
-            "lower_95=>",
-            str(datetime.timedelta(seconds=lower_95[0, i] * (60 * 60))),
-            "lower_50=>",
-            str(datetime.timedelta(seconds=lower_50[0, i] * (60 * 60))),
-            "middle=>",
-            str(datetime.timedelta(seconds=middle[0, i] * (60 * 60))),
-            "upper_50=>",
-            str(datetime.timedelta(seconds=upper_50[0, i] * (60 * 60))),
-            "upper_95=>",
-            str(datetime.timedelta(seconds=upper_95[0, i] * (60 * 60))),
-        )
-        print("\n")
+    print_estimation(sample, enc_dec_splitid)
     draw_graph(sample, enc_dec_splitid)
 
 
@@ -269,8 +286,10 @@ def main():
     parser.add_argument("--decoder_model_path", default='decoder')
 
     args = parser.parse_args()
+    if args.record_so_far is not None:
+        args.do_predict = True
 
-    if args.do_train:
+    if args.do_train or args.do_eval:
 
         df = pd.read_csv(args.train_data_path)
         df = df.sample(len(df))
@@ -295,7 +314,8 @@ def main():
         data /= (60 * 60)
 
         dataset, valid_dataset, test_dataset = makedataset(data)
-        encoder, decoder = train(dataset, valid_dataset)
+        if args.do_train:
+            encoder, decoder = train(dataset, valid_dataset)
     encoder = Encoder()
     decoder = Decoder()
     encoder.load_weights(args.encoder_model_path)
