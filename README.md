@@ -10,7 +10,7 @@ You can train a model with your data. However, I've already prepared a trained m
 
 To predict a finishing time, for example, run  
 
-```python main.py --record_so_far "0:25:00, 0:50:00"```  
+```python main.py --elapsed_time "0:25:00, 0:50:00"```  
 
 Then it shows
 ```
