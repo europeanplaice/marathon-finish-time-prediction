@@ -6,6 +6,7 @@ import argparse
 from tqdm import tqdm
 import seaborn as sns
 import pandas as pd
+from utils import parse_time
 sns.set(font="ricty diminished")
 HIDDEN_SIZE = 128
 BATCH_SIZE = 256
@@ -152,20 +153,6 @@ def makedataset(data):
     return dataset, valid_dataset, test_dataset
 
 
-def parse_time(x):
-    try:
-        splited = [int(y) for y in x.split(":")]
-        time_parsed = datetime.time(*splited)
-        time_parsed = datetime.timedelta(
-            hours=time_parsed.hour,
-            minutes=time_parsed.minute,
-            seconds=time_parsed.second,
-        )
-        return time_parsed.total_seconds()
-    except ValueError:
-        return -1
-
-
 def predict_from_record(data, encoder, decoder, enc_dec_splitid):
     dataforenc = data[:, :enc_dec_splitid]
 
@@ -278,8 +265,10 @@ def main():
     parser.add_argument("--train_data_path", default='boston2017-2018.csv')
     parser.add_argument("--elapsed_time")
     parser.add_argument("--full_record")
-    parser.add_argument("--encoder_model_path", default='encoder')
-    parser.add_argument("--decoder_model_path", default='decoder')
+    parser.add_argument("--encoder_model_path",
+                        default='trained_model/encoder')
+    parser.add_argument("--decoder_model_path",
+                        default='trained_model/decoder')
 
     args = parser.parse_args()
     if args.elapsed_time is not None:
