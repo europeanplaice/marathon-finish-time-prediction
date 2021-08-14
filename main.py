@@ -6,7 +6,6 @@ import argparse
 from tqdm import tqdm
 import seaborn as sns
 import pandas as pd
-import copy
 sns.set(font="ricty diminished")
 HIDDEN_SIZE = 128
 BATCH_SIZE = 256
@@ -48,7 +47,7 @@ class Decoder(tf.keras.Model):
             lambda t: tfp.distributions.Independent(tfp.distributions.Normal(
                 loc=t[:, :, 0],
                 scale=tf.math.softplus(t[:, :, 1]),
-                ),
+            ),
                 reinterpreted_batch_ndims=2
             )
         )
@@ -83,7 +82,9 @@ def train(dataset, test_dataset):
     optimizer = tf.optimizers.Adam(learning_rate=0.0001)
     encoder = Encoder()
     decoder = Decoder()
-    def negloglik(y, rv_y): return -rv_y.log_prob(tf.cast(y, tf.float32))
+
+    def negloglik(y, rv_y):
+        return -rv_y.log_prob(tf.cast(y, tf.float32))
     patience = 0
     for i in tqdm(range(200)):
         for data in dataset:
@@ -119,11 +120,7 @@ def train(dataset, test_dataset):
                     state, splits_recorded, enc_dec_splitid, kmfordec,
                     dataforenc, training=False)
                 loss = negloglik(datafordec, predicts)
-                # sample = predicts.sample(1000)
-                # print(datafordec.shape, tf.reduce_mean(sample, 0).shape)
-                # mse = tf.keras.losses.MeanSquaredError()
-                # loss = mse(datafordec, tf.reduce_mean(sample, 0))
-                
+
                 test_losses.append(loss)
         print("\n", np.mean(test_losses))
         if i == 0:
@@ -171,7 +168,6 @@ def parse_time(x):
 
 def predict_from_record(data, encoder, decoder, enc_dec_splitid):
     dataforenc = data[:, :enc_dec_splitid]
-    datafordec = data[:, enc_dec_splitid:]
 
     kmforenc = km[:enc_dec_splitid]
     kmfordec = km[enc_dec_splitid:]
