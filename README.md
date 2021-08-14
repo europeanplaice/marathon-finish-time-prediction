@@ -28,5 +28,12 @@ and a graph.
 
 ![Figure_1](https://user-images.githubusercontent.com/38364983/129431606-f888b98b-0731-47f2-8d1d-1ef0dcd578a5.png)
 
+To predict, you must specify at least one time, but you can start prediction at any position where you are running.
 
+
+For example, either  
+```python main.py --elapsed_time "0:27:00"``` 
+or  
+```python main.py --elapsed_time "0:27:00, 0:55:00, 1:15:00, 1:40:00"```  
+is ok.
 
