@@ -10,23 +10,25 @@ You can train a model with your data. However, I've already prepared a trained m
 
 To predict a finishing time, for example, run  
 
-```python main.py --elapsed_time "0:25:00, 0:50:00"```  
+```python main.py --elapsed_time "0:25:00,0:50:00"```  
 
 Then it shows
 ```
 **Estimation**
-15Km        lower_95 => 1:12:45   lower_50 => 1:14:36   median => 1:15:34   upper_50 => 1:16:32   upper_95 => 1:18:23
-20Km        lower_95 => 1:35:26   lower_50 => 1:39:37   median => 1:41:48   upper_50 => 1:44:00   upper_95 => 1:48:09
-Half        lower_95 => 1:40:46   lower_50 => 1:45:05   median => 1:47:21   upper_50 => 1:49:36   upper_95 => 1:53:55
-25Km        lower_95 => 1:58:04   lower_50 => 2:04:59   median => 2:08:36   upper_50 => 2:12:13   upper_95 => 2:19:05
-30Km        lower_95 => 2:21:17   lower_50 => 2:31:48   median => 2:37:17   upper_50 => 2:42:53   upper_95 => 2:53:23
-35Km        lower_95 => 2:43:22   lower_50 => 2:59:17   median => 3:07:35   upper_50 => 3:15:57   upper_95 => 3:31:52
-40Km        lower_95 => 3:05:47   lower_50 => 3:26:45   median => 3:37:38   upper_50 => 3:48:29   upper_95 => 4:09:10
-Finish      lower_95 => 3:16:59   lower_50 => 3:39:20   median => 3:51:06   upper_50 => 4:02:52   upper_95 => 4:25:17
+5Km        0:25:00    lower_95 => ******* lower_50 => ******* median => ******* upper_50 => ******* upper_95 => *******
+10Km       0:50:00    lower_95 => ******* lower_50 => ******* median => ******* upper_50 => ******* upper_95 => *******
+15Km                  lower_95 => 1:12:57 lower_50 => 1:14:49 median => 1:15:48 upper_50 => 1:16:46 upper_95 => 1:18:39
+20Km                  lower_95 => 1:34:49 lower_50 => 1:39:16 median => 1:41:36 upper_50 => 1:43:57 upper_95 => 1:48:22
+Half                  lower_95 => 1:40:32 lower_50 => 1:44:56 median => 1:47:16 upper_50 => 1:49:35 upper_95 => 1:53:59
+25Km                  lower_95 => 1:57:48 lower_50 => 2:04:51 median => 2:08:34 upper_50 => 2:12:19 upper_95 => 2:19:26
+30Km                  lower_95 => 2:21:04 lower_50 => 2:31:39 median => 2:37:12 upper_50 => 2:42:48 upper_95 => 2:53:24
+35Km                  lower_95 => 2:43:38 lower_50 => 2:59:02 median => 3:07:04 upper_50 => 3:15:01 upper_95 => 3:30:14
+40Km                  lower_95 => 3:05:54 lower_50 => 3:26:20 median => 3:36:53 upper_50 => 3:47:29 upper_95 => 4:07:26
+Finish                lower_95 => 3:16:49 lower_50 => 3:38:30 median => 3:49:56 upper_50 => 4:01:20 upper_95 => 4:23:15
 ```
 and a graph.
 
-![Figure_1](https://user-images.githubusercontent.com/38364983/129431606-f888b98b-0731-47f2-8d1d-1ef0dcd578a5.png)
+![estimation](https://user-images.githubusercontent.com/38364983/129465869-c1d2c398-41dd-4fab-97c3-3f8f15e67bb9.jpg)
 
 To predict, you must specify at least one time, but you can start prediction at any position where you are running.
 
@@ -71,4 +73,5 @@ Finish                lower_95 => 3:34:20 lower_50 => 3:57:37 median => 4:09:51 
 ```
 also a graph is
 
-![estimation](https://user-images.githubusercontent.com/38364983/129465386-2ee26a0a-b44f-4b90-b18e-da68410357b0.jpg)
+![estimation](https://user-images.githubusercontent.com/38364983/129465880-ff55b09c-d9cc-41c4-8e63-342ffe531c68.jpg)
+
