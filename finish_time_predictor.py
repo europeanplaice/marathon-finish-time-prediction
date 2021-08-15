@@ -231,7 +231,7 @@ class FinishTimePredictor():
                 estimated_data = \
                     f"lower_95 => {lower_95} " \
                     f"lower_50 => {lower_50} " \
-                    f"middle => {middle} " \
+                    f"median => {middle} " \
                     f"upper_50 => {upper_50} " \
                     f"upper_95 => {upper_95} "
             print(
