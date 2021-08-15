@@ -1,6 +1,7 @@
 import datetime
-import tensorflow as tf
+
 import numpy as np
+import tensorflow as tf
 
 
 def seconds_to_string(x):

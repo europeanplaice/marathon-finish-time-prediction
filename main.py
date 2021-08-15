@@ -1,14 +1,11 @@
-import tensorflow as tf
-import numpy as np
-import datetime
-import matplotlib.pyplot as plt
 import argparse
-from tqdm import tqdm
-import seaborn as sns
+
 import pandas as pd
-from utils import parse_time, preprocess_rawdata, makedataset
-from utils import process_one_dim_to_two_dim_sec, save_feather
-from finish_time_predictor import Encoder, Decoder, FinishTimePredictor
+import seaborn as sns
+
+from finish_time_predictor import Decoder, Encoder, FinishTimePredictor
+from utils import (makedataset, preprocess_rawdata)
+
 sns.set(font="ricty diminished")
 
 

@@ -1,6 +1,8 @@
 # marathon-finish-time-prediction
 It predicts your marathon's finishing time based on the split time using a method of machine learning. It can show not only the specific estimated time but also a range of possible finishing times. Inside this model, I employed Tensorflow and Tensorflow Probability.
 
+To make a prediction, it doesn't use any features such as race conditions, runners' age, past results, and so on, but it uses only the time elapsed.
+
 ## Features
 - [x] Visualization
 - [x] Outputs an estimation to stdout

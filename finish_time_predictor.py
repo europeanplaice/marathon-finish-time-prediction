@@ -1,8 +1,9 @@
-import tensorflow as tf
-import numpy as np
-from tqdm import tqdm
 import matplotlib.pyplot as plt
-from utils import seconds_to_string, process_one_dim_to_two_dim_sec
+import numpy as np
+import tensorflow as tf
+from tqdm import tqdm
+
+from utils import process_one_dim_to_two_dim_sec, seconds_to_string
 
 MILESTONE = [
     "5Km", "10Km", "15Km", "20Km", "Half", "25Km",
