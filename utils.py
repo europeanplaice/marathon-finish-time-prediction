@@ -30,6 +30,8 @@ def process_one_dim_to_two_dim_sec(one_dim_list):
 
 def preprocess_rawdata(df):
 
+    df = df.sample(len(df))
+
     df["5K"] = df["5K"].apply(parse_time)
     df["10K"] = df["10K"].apply(parse_time)
     df["15K"] = df["15K"].apply(parse_time)
@@ -67,3 +69,7 @@ def makedataset(data, args, return_one_batch_eval_dataset):
         return train_dataset, eval_dataset, test_dataset
     else:
         return train_dataset, eval_dataset
+
+
+def save_feather(df):
+    df.to_feather("file.feather")

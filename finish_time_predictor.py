@@ -87,14 +87,14 @@ class FinishTimePredictor():
         self.encoder.load_weights(args.encoder_model_path)
         self.decoder.load_weights(args.decoder_model_path)
 
-    def train(self, dataset, test_dataset, args):
+    def train(self, dataset, eval_dataset, args):
         optimizer = tf.optimizers.Adam(learning_rate=0.0001)
 
         def negloglik(y, rv_y):
             return -rv_y.log_prob(tf.cast(y, tf.float32))
         patience = 0
         for i in tqdm(range(200)):
-            for data in dataset:
+            for data in tqdm(dataset):
                 enc_dec_splitid = np.random.randint(1, 10 - 1)
                 dataforenc = data[:, :enc_dec_splitid]
                 datafordec = data[:, enc_dec_splitid:]
@@ -120,7 +120,7 @@ class FinishTimePredictor():
                         self.decoder.trainable_weights))
             test_losses = []
             for enc_dec_splitid in range(1, 10):
-                for test_data in test_dataset:
+                for test_data in eval_dataset:
                     dataforenc = test_data[:, :enc_dec_splitid]
                     datafordec = test_data[:, enc_dec_splitid:]
                     kmforenc = MILESTONE_FLOAT[:enc_dec_splitid]
@@ -142,13 +142,13 @@ class FinishTimePredictor():
                 if np.mean(test_losses) > best:
                     if patience == 5:
                         print("Early stopping.")
-                        break
+                        return
                     else:
                         patience += 1
                 else:
                     best = min(best, np.mean(test_losses))
                     self.encoder.save_weights(args.encoder_model_path)
-                    self.encoder.save_weights(args.decoder_model_path)
+                    self.decoder.save_weights(args.decoder_model_path)
                     patience = 0
 
     def validate(self, dataset, args):
@@ -164,15 +164,24 @@ class FinishTimePredictor():
             graph.add_estimated_data()
             graph.show()
 
-    def predict(self, one_dim_list, args):
-        enc_dec_splitid = len(one_dim_list)
-        two_dim_list = process_one_dim_to_two_dim_sec(one_dim_list)
+    def predict(self, one_dim_baseline, args, one_dim_whatif=None):
+        enc_dec_splitid = len(one_dim_baseline)
+        two_dim_list = process_one_dim_to_two_dim_sec(one_dim_baseline)
         self.get_sample(two_dim_list, enc_dec_splitid, args)
-        one_dim_encoder_data = one_dim_list[:enc_dec_splitid]
+        one_dim_encoder_data = one_dim_baseline[:enc_dec_splitid]
         self.print_estimation(one_dim_encoder_data)
         graph = Graph(self)
-        graph.add_actual_data(one_dim_encoder_data)
+        # graph.add_actual_data(one_dim_encoder_data)
         graph.add_estimated_data()
+
+        if one_dim_whatif is not None:
+            enc_dec_splitid = len(one_dim_whatif)
+            two_dim_list = process_one_dim_to_two_dim_sec(one_dim_whatif)
+            self.get_sample(two_dim_list, enc_dec_splitid, args)
+            one_dim_encoder_data = one_dim_whatif[:enc_dec_splitid]
+            self.print_estimation(one_dim_encoder_data)
+            # graph.add_actual_data(one_dim_encoder_data)
+            graph.add_estimated_data(color="green")
         graph.save(args)
 
     def get_sample(self, two_dim_list, enc_dec_splitid, args):
@@ -263,17 +272,17 @@ class Graph():
         self.ax.plot(
             self.xaxis[-prediction_steps:],
             self.finish_time_predictor.middle[batch_idx], label="forecast",
-            linestyle='--', marker='o')
+            linestyle='--', marker='o', color=color)
         self.ax.fill_between(
             self.xaxis[-prediction_steps:],
             self.finish_time_predictor.lower_95[batch_idx],
             self.finish_time_predictor.upper_95[batch_idx],
-            color=color, alpha=0.3, label="ci95%")
+            color=color, alpha=0.2, label="ci95%")
         self.ax.fill_between(
             self.xaxis[-prediction_steps:],
             self.finish_time_predictor.lower_50[batch_idx],
             self.finish_time_predictor.upper_50[batch_idx],
-            color=color, alpha=0.5, label="ci50%")
+            color=color, alpha=0.4, label="ci50%")
 
     def save(self, args):
         self.ax.legend()
