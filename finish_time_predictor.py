@@ -277,12 +277,12 @@ class Graph():
             self.xaxis[-prediction_steps:],
             self.finish_time_predictor.lower_95[batch_idx],
             self.finish_time_predictor.upper_95[batch_idx],
-            color=color, alpha=0.2, label="ci95%")
+            color=color, alpha=0.3, label="ci95%")
         self.ax.fill_between(
             self.xaxis[-prediction_steps:],
             self.finish_time_predictor.lower_50[batch_idx],
             self.finish_time_predictor.upper_50[batch_idx],
-            color=color, alpha=0.4, label="ci50%")
+            color=color, alpha=0.5, label="ci50%")
 
     def save(self, args):
         self.ax.legend()

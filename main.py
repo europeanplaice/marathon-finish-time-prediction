@@ -54,10 +54,16 @@ def main():
         finish_time_predictor.validate(eval_onebatch_dataset, args)
     if args.do_predict:
         finish_time_predictor.load_weights(args)
-        finish_time_predictor.predict(
-            args.elapsed_time.split(","),
-            args,
-            args.elapsed_time_what_if.split(","),
+        if args.elapsed_time_what_if is not None:
+            finish_time_predictor.predict(
+                args.elapsed_time.split(","),
+                args,
+                args.elapsed_time_what_if.split(","),
+            )
+        else:
+            finish_time_predictor.predict(
+                args.elapsed_time.split(","),
+                args,
             )
 
 
