@@ -7,6 +7,15 @@ To make a prediction, it doesn't use any features such as race conditions, runne
 - [x] Visualization
 - [x] Outputs an estimation to stdout
 
+## Requirements
+* Tensorflow
+* Tensorflow Probability
+* Numpy
+* Pandas
+* Matplotlib
+* Seaborn
+* Tqdm
+
 ## Get Started
 You can train a model with your data. However, I've already prepared a trained model, and you can estimate the time without your data by using the trained weight in this repository.  
 
