@@ -3,6 +3,10 @@ It predicts your marathon's finishing time based on the split time using a metho
 
 To make a prediction, it doesn't use any features such as race conditions, runners' age, past results, and so on, but it uses only the time elapsed.
 
+## Web App
+
+http://sleepy-tundra-61541.herokuapp.com/
+
 ## Features
 - [x] Visualization
 - [x] Outputs an estimation to stdout
