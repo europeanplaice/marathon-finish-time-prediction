@@ -5,7 +5,9 @@ To make a prediction, it doesn't use any features such as race conditions, runne
 
 ## Web App
 
-http://sleepy-tundra-61541.herokuapp.com/
+http://sleepy-tundra-61541.herokuapp.com/  
+
+The code is here https://github.com/europeanplaice/marathon-finish-time-prediction-web-app
 
 ## Features
 - [x] Visualization
