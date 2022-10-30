@@ -3,9 +3,24 @@ It predicts your marathon's finishing time based on the split time using a metho
 
 To make a prediction, it doesn't use any features such as race conditions, runners' age, past results, and so on, but it uses only the time elapsed.
 
+## Web App
+
+http://sleepy-tundra-61541.herokuapp.com/  
+
+The code is here https://github.com/europeanplaice/marathon-finish-time-prediction-web-app
+
 ## Features
 - [x] Visualization
 - [x] Outputs an estimation to stdout
+
+## Requirements
+* Tensorflow
+* Tensorflow Probability
+* Numpy
+* Pandas
+* Matplotlib
+* Seaborn
+* Tqdm
 
 ## Get Started
 You can train a model with your data. However, I've already prepared a trained model, and you can estimate the time without your data by using the trained weight in this repository.  
