@@ -69,7 +69,7 @@ def makedataset(data, args, return_one_batch_eval_dataset):
         test_dataset = get_tfdataset(data[idx:], 1)
         return train_dataset, eval_dataset, test_dataset
     else:
-        return train_dataset, eval_dataset
+        return train_dataset, eval_dataset, None
 
 
 def save_feather(df):
